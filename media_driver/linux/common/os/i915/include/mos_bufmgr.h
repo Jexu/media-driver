@@ -37,7 +37,15 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <map>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+
 #include "libdrm_macros.h"
+
+
+static std::map<uint32_t, unsigned long> HANDLE_LIST;
 
 #define S_SUCCESS 0
 #define mos_safe_free(p)        \

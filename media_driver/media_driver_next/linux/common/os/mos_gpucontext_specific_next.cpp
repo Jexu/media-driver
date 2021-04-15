@@ -1234,10 +1234,13 @@ MOS_STATUS GpuContextSpecificNext::SubmitCommandBuffer(
             {
                 if (scalaEnabled && !streamState->bGucSubmission)
                 {
+                    printf(">>>>>>startinggggg, 3 times submission for one frame\n");
+
                     uint32_t secondaryIndex = 0;
                     it = m_secondaryCmdBufs.begin();
                     while(it != m_secondaryCmdBufs.end())
                     {
+                        printf(">>>>>>>>>>>>>scala enable, submiting\n");
                         if (it->second->iSubmissionType & SUBMISSION_TYPE_MULTI_PIPE_SLAVE)
                         {
                             if(execFlag == MOS_GPU_NODE_VE)
@@ -1255,6 +1258,8 @@ MOS_STATUS GpuContextSpecificNext::SubmitCommandBuffer(
                                                  DR4);
                         it++;
                     }
+
+                    printf(">>>>>>endinggggg\n");
                 }
                 else if(scalaEnabled && streamState->bGucSubmission)
                 {
@@ -1442,6 +1447,7 @@ int32_t GpuContextSpecificNext::SubmitPipeCommands(
     if(cmdBuffer->iSubmissionType & SUBMISSION_TYPE_MULTI_PIPE_MASTER)
     {
         osContext->submit_fence = fence;
+        printf(">>>>>>>>>>>>>>master fence: %d\n", fence);
     }
 
     if(cmdBuffer->iSubmissionType & SUBMISSION_TYPE_MULTI_PIPE_FLAGS_LAST_PIPE)

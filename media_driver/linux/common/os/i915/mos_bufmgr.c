@@ -924,10 +924,16 @@ retry:
                    &create);
         bo_gem->gem_handle = create.handle;
         bo_gem->bo.handle = bo_gem->gem_handle;
+
+        printf(">>>>>>>>>>>>>>DRM_IOCTL_I915_GEM_CREATE: handle: %d, size: %llu\n", bo_gem->gem_handle, create.size);
+
         if (ret != 0) {
             free(bo_gem);
             return nullptr;
         }
+
+        HANDLE_LIST[bo_gem->gem_handle] = create.size;
+
         bo_gem->bo.bufmgr = bufmgr;
         bo_gem->bo.align = alignment;
 
@@ -2687,6 +2693,108 @@ mos_gem_bo_exec(struct mos_linux_bo *bo, int used,
     return ret;
 }
 
+int mos_debug_dump_bo_resource(struct mos_bufmgr_gem *bufmgr_gem, std::map<uint32_t, unsigned long> handles)
+{
+    printf(">>>handles\n");
+    int ret = 0;
+    auto it = handles.begin();
+    struct drm_i915_gem_mmap mmap_arg;
+    char filePath[1024] = {'0'};
+    while(it != handles.end())
+    {
+        printf("handle: %d, size: %lu\n", it->first, it->second);
+
+        memclear(mmap_arg);
+        mmap_arg.handle = it->first;
+        mmap_arg.size = it->second;
+        ret = drmIoctl(bufmgr_gem->fd,
+                   DRM_IOCTL_I915_GEM_MMAP,
+                   &mmap_arg);
+        if (ret != 0) {
+            ret = -errno;
+            return ret;
+        }
+        VG(VALGRIND_MALLOCLIKE_BLOCK(mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
+        void *data = (void *)(uintptr_t) mmap_arg.addr_ptr;
+
+        {
+            sprintf(filePath, "/tmp/codechal_dump/bo_handle_%d_size_%lu", it->first, it->second);
+            //const char *filePath = "/tmp/codechal_dump/bo_handle";
+
+            if (mmap_arg.size == 0)
+            {
+                return -22;
+            }
+
+            std::ofstream ofs(filePath, std::ios_base::out | std::ios_base::binary);
+            if (ofs.fail())
+            {
+                return -22;
+            }
+
+            ofs.write((char *)data, mmap_arg.size);
+            ofs.close();
+        }
+
+        it++;
+    }
+
+    return ret;
+}
+
+void mos_debug_print_batch_res_bo(struct mos_bufmgr_gem *bufmgr_gem, struct mos_linux_context *ctx, int batch_count, int func)
+{
+    if(1) // debug
+    {
+        printf(">>>>>>>>>>>>>>>>>do_exec%d>>>>>>>>>>\n", func);
+        struct drm_i915_gem_relocation_entry * relocs_ptr;
+        printf("\n ctx->ctx_id=%u bufmgr=%p\n", ctx->ctx_id,bufmgr_gem);
+
+
+        for (int i=0; i < bufmgr_gem->exec_count; i++)
+        {
+            if(0)
+            {
+                printf("obj[%d] handle =%u reloc count=%u ptr=%llx\n",
+                    i,
+                    bufmgr_gem->exec2_objects[i].handle,
+                    bufmgr_gem->exec2_objects[i].relocation_count,
+                    bufmgr_gem->exec2_objects[i].relocs_ptr);
+            }
+            else
+            {
+                printf("obj[%d] handle =%u reloc count=%u ptr=%llx alignment=%llx offset=%llx flags=%llx rsvd1=%llx pad_to_size=%llx rsvd2=%llx\n",
+                i,
+                bufmgr_gem->exec2_objects[i].handle,
+                bufmgr_gem->exec2_objects[i].relocation_count,
+                bufmgr_gem->exec2_objects[i].relocs_ptr,
+                bufmgr_gem->exec2_objects[i].alignment,
+                bufmgr_gem->exec2_objects[i].offset,
+                bufmgr_gem->exec2_objects[i].flags,
+                bufmgr_gem->exec2_objects[i].rsvd1,
+                bufmgr_gem->exec2_objects[i].pad_to_size,
+                bufmgr_gem->exec2_objects[i].rsvd2);
+            }
+        }
+
+        for(int n = 0; n < batch_count; n++)
+        {
+            printf(">>>>>>>>>>>>>>>>>relocs entry - %d>>>>>>>>>>\n", n);
+            relocs_ptr = (struct drm_i915_gem_relocation_entry *) bufmgr_gem->exec2_objects[bufmgr_gem->exec_count - batch_count + n].relocs_ptr;
+
+            for (int j=0; j<bufmgr_gem->exec2_objects[bufmgr_gem->exec_count-batch_count+n].relocation_count ; j++)
+            {
+                printf("relocs entry[%d].handle=%u, write_domain=%u\n",
+                        j,
+                        relocs_ptr[j].target_handle,
+                        relocs_ptr[j].write_domain);
+            }
+            printf(">>>>>>>>>>>>>>>>>end relocs entry - %d>>>>>>>>>>\n", n);
+        }
+        printf(">>>>>>>>>>>>>>>>>end do_exec%d>>>>>>>>>>\n", func);
+    }
+}
+
 drm_export int
 do_exec2(struct mos_linux_bo *bo, int used, struct mos_linux_context *ctx,
      drm_clip_rect_t *cliprects, int num_cliprects, int DR4,
@@ -2730,6 +2838,9 @@ do_exec2(struct mos_linux_bo *bo, int used, struct mos_linux_context *ctx,
      * pointing to it.
      */
     mos_add_validate_buffer2(bo, 0);
+
+    mos_debug_print_batch_res_bo(bufmgr_gem, ctx, 1, 1); // debug
+    mos_debug_dump_bo_resource(bufmgr_gem, HANDLE_LIST);
 
     memclear(execbuf);
     execbuf.buffers_ptr = (uintptr_t)bufmgr_gem->exec2_objects;
@@ -2920,7 +3031,7 @@ mos_gem_bo_set_tiling_internal(struct mos_linux_bo *bo,
         set_tiling.handle = bo_gem->gem_handle;
         set_tiling.tiling_mode = tiling_mode;
         set_tiling.stride = stride;
-
+printf(">>>>>>>>>>>>>>DRM_IOCTL_I915_GEM_SET_TILING: dandle: %d\n", bo_gem->gem_handle);
         ret = ioctl(bufmgr_gem->fd,
                 DRM_IOCTL_I915_GEM_SET_TILING,
                 &set_tiling);
