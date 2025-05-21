@@ -1,0 +1,13 @@
+#ifndef __MOS_GPU_CTX_MGR_DEFS_H__
+#define __MOS_GPU_CTX_MGR_DEFS_H__
+
+typedef enum _GpuCtxMgrComponentFuncType
+{
+    GPU_CTX_MGR_FUNC_TYPE_DECODE = 0,
+    GPU_CTX_MGR_FUNC_TYPE_ENCODE,
+    GPU_CTX_MGR_FUNC_TYPE_VP_COMPUTE,
+    GPU_CTX_MGR_FUNC_TYPE_VP_VEBOX,
+    GPU_CTX_MGR_FUNC_TYPE_RENDER
+} GpuCtxMgrComponentFuncType;
+
+#endif // __MOS_GPU_CTX_MGR_DEFS_H__
