@@ -555,10 +555,10 @@ namespace decode
         CodecVvcPicParams   *picParams   = m_vvcBasicFeature->m_vvcPicParams;
         CodecVvcSliceParams *sliceParams = m_curSliceParams;
 
-        if (picParams->m_ppsFlags.m_fields.m_ppsRectSliceFlag)
-        {
-            MHW_MI_CHK_NULL(m_sliceDesc);
-        }
+        // This is the first part of the change.
+        // The MHW_MI_CHK_NULL(m_sliceDesc) call was previously inside an if block.
+        // It's being moved out to be unconditional.
+        MHW_MI_CHK_NULL(m_sliceDesc);
 
         if (picParams->m_spsFlags0.m_fields.m_spsAlfEnabledFlag)
         {
@@ -596,12 +596,12 @@ namespace decode
         // CRC enable
         params.pVvcpDebugEnable = false;
 
-        if (picParams->m_ppsFlags.m_fields.m_ppsRectSliceFlag)
-        {
-            params.dMultipleSlicesInTileFlag    = m_sliceDesc->m_multiSlicesInTileFlag;
-            params.dIsbottommostsliceoftileFlag = m_sliceDesc->m_bottomSliceInTileFlag;
-            params.dIstopmostsliceoftileFlag    = m_sliceDesc->m_topSliceInTileFlag;
-        }
+        // This is the second part of the change.
+        // These assignments were previously inside the if block that we are removing.
+        // They are now unconditional.
+        params.dMultipleSlicesInTileFlag    = m_sliceDesc->m_multiSlicesInTileFlag;
+        params.dIsbottommostsliceoftileFlag = m_sliceDesc->m_bottomSliceInTileFlag;
+        params.dIstopmostsliceoftileFlag    = m_sliceDesc->m_topSliceInTileFlag;
 
         // Partition info of SubPic v.s. Slice
         if (picParams->m_spsFlags0.m_fields.m_spsSubpicInfoPresentFlag && picParams->m_spsNumSubpicsMinus1 > 0)
