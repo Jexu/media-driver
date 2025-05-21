@@ -1510,14 +1510,10 @@ namespace decode
                         m_subPicParams[i].m_spsSubpicHeightMinus1 + 1 < m_tileRow[startTileY].m_heightInCtb)
                     {
                         m_sliceDesc[i].m_multiSlicesInTileFlag = 1;
-                        m_sliceDesc[i].m_topSliceInTileFlag    = (startCtu == m_tileRow[startTileY].m_startCtbY) ? true : false;
-                        m_sliceDesc[i].m_bottomSliceInTileFlag = (endCtu == m_tileRow[endTile].m_endCtbY) ? true : false;
                     }
                     else
                     {
                         m_sliceDesc[i].m_multiSlicesInTileFlag = 0;
-                        m_sliceDesc[i].m_topSliceInTileFlag    = 0;
-                        m_sliceDesc[i].m_bottomSliceInTileFlag = 0;
                     }
 
                     m_sliceDesc[i].m_startTileX         = startTileX;
